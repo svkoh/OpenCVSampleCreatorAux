@@ -4,6 +4,16 @@
 import sys
 import os
 import cv
+from preference import *
+from recordline import *
+
+pref = preference()
+idxFile = pref.pref.get('Index File Name')
+mode = pref.pref.get('Mode')
+loop = pref.pref.get('Loop')
+
+idx = {}
+
 
 box = [-1, -1, 0, 0]
 drawing_box = 0
@@ -45,40 +55,82 @@ def draw_rectangle_callback(event, x, y, flags, param):
             draw_box(param, box)
 
 if __name__ == '__main__':
+    # Files to be processed
     srcv = sys.argv[1:]
     size = len(srcv)
-    f = open('abc.idx', 'a')
-    for i in srcv:
-        object_cnt = 0
-        saving_msg = ''
-        img = cv.LoadImageM(i)
-        cv.NamedWindow(i)
-        cv.ShowImage(i, img)
+    
+    # If the mode is Modify, we should read the idx file first
+    if mode == 'Modify':
+        f = open(idxFile, 'r')
+        for line in f.readlines():
+            rl = recordline(line)
+            idx[rl.filename] = rl
+        f.close()
+        
+    # Process each file
+    i = 0
+    while i < size and i >= 0:
+        # Load and show img
+        img = cv.LoadImageM(srcv[i])
+        cv.NamedWindow(srcv[i])
+        cv.ShowImage(srcv[i], img)
+        
+        if srcv[i] not in idx:
+            idx[srcv[i]] = recordline(srcv[i])
+            
+        temprl = idx[srcv[i]]
+        
+        # create a temp img to manipulate
         src = cv.CreateImage(cv.GetSize(img), 8, 3)
         cv.Copy(img, src)
         temp = cv.CreateImage(cv.GetSize(img), 8, 3)
-        cv.SetMouseCallback(i, draw_rectangle_callback, img)
+        cv.SetMouseCallback(srcv[i], draw_rectangle_callback, img)
         while 1:
             cv.Copy(img, temp)
             if drawing_box:
                 draw_box(temp, box)
-            cv.ShowImage(i, temp)
+            cv.ShowImage(srcv[i], temp)
             cv.Copy(src, img)
             draw_box(img, box)
-            cv.ShowImage(i, img)
+            cv.ShowImage(srcv[i], img)
             key = cv.WaitKey(15)
-            if key == 115:
+            if key == 115: # char 's'
                 if box[0] > 0:
-                    object_cnt += 1
-                    saving_msg += '    {0} {1} {2} {3}'.format(box[0], box[1], box[2], box[3])
-                    print i + '    {0}'.format(object_cnt) + saving_msg
-            elif key == 83:
-                f.write(i + '    {0}'.format(object_cnt) + saving_msg + '\n')
-                print 'Saving item "' + i + '    {0}'.format(object_cnt) + saving_msg + '"'
-            elif key == 114:
-                object_cnt = 0
-                saving_msg = ''
-            elif key == 27:
+                    temprl.add(box)
+                    print temprl.toString()
+            elif key == 83: # char 'S'
+                idx[srcv[i]] = temprl
+            elif key == 19: # CTRL + s
+                f = open(idxFile, 'w')
+                for rl in idx:
+                    f.write(idx[rl].toString() + '\n')
+            elif key == 114: # char 'r'
+                temprl = recordline(srcv[i])
+            elif key == 2424832: # left arrow, process the previous image
                 box = [-1, -1, 0, 0]
+                cv.DestroyWindow(srcv[i])
+                i -= 2
                 break
-        cv.DestroyWindow(i)
+            elif key == 2555904: # right arrow, process next image
+                box = [-1, -1, 0, 0]
+                cv.DestroyWindow(srcv[i])
+                break
+            elif key == 27: # ESC; Use ESC to stop processing current image
+                box = [-1, -1, 0, 0]
+                cv.DestroyWindow(srcv[i])
+                break
+            elif key == 113: # char 'q'; Whenever we can use 'q' to quit
+                box = [-1, -1, 0, 0]
+                cv.DestroyWindow(srcv[i])
+                i = -2 - size
+                break
+           # else:  # used for getting the code of the key you pressed
+           #     print key
+           
+        i += 1
+        if loop:
+            if i < 0:
+                i += size
+            if i >= size:
+                i -= size
+     

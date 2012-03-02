@@ -1,0 +1,7 @@
+Index File Name = abc.idx
+
+# Mode = Replace | Modify
+Mode = Modify
+
+# When walk over the end, set to the begin (vice vesa)
+Loop = true
