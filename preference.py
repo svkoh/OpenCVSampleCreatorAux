@@ -16,9 +16,9 @@ class preference:
                 prefName = line.split('=')[0].strip()
                 prefValue = line.split('=')[1].strip()
                 # handle the value of type boolean
-                if prefValue.upper() == "TRUE" or prefValue.upper() == "1":
+                if prefValue.upper() == "TRUE" or prefValue == "1":
                     prefValue = True
-                else:
+                elif prefValue.upper() == "FALSE" or prefValue == "0":
                     prefValue = False
                 self.pref[prefName] = prefValue
                 
